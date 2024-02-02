@@ -80,7 +80,8 @@ Main driver's function is 'spi_lobo_transfer_data()'
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "driver/periph_ctrl.h"
-#include "esp_heap_alloc_caps.h"
+#include "esp_heap_caps.h"
+#include "soc/io_mux_reg.h"
 #include "spi_master_lobo.h"
 
 
@@ -316,7 +317,7 @@ static esp_err_t spi_lobo_bus_initialize(spi_lobo_host_device_t host, spi_lobo_b
 
     if (init > 0) {
 		//spihost[host]=malloc(sizeof(spi_lobo_host_t));
-		spihost[host]=pvPortMallocCaps(sizeof(spi_lobo_host_t), MALLOC_CAP_DMA);
+		spihost[host]=heap_caps_malloc(sizeof(spi_lobo_host_t), MALLOC_CAP_DMA);
 		if (spihost[host]==NULL) return ESP_ERR_NO_MEM;
 		memset(spihost[host], 0, sizeof(spi_lobo_host_t));
 		// Create semaphore
@@ -385,8 +386,8 @@ static esp_err_t spi_lobo_bus_initialize(spi_lobo_host_device_t host, spi_lobo_b
         if (dma_desc_ct==0) dma_desc_ct=1; //default to 4k when max is not given
         spihost[host]->max_transfer_sz = dma_desc_ct*SPI_MAX_DMA_LEN;
 
-        spihost[host]->dmadesc_tx=pvPortMallocCaps(sizeof(lldesc_t)*dma_desc_ct, MALLOC_CAP_DMA);
-        spihost[host]->dmadesc_rx=pvPortMallocCaps(sizeof(lldesc_t)*dma_desc_ct, MALLOC_CAP_DMA);
+        spihost[host]->dmadesc_tx=heap_caps_malloc(sizeof(lldesc_t)*dma_desc_ct, MALLOC_CAP_DMA);
+        spihost[host]->dmadesc_rx=heap_caps_malloc(sizeof(lldesc_t)*dma_desc_ct, MALLOC_CAP_DMA);
         if (!spihost[host]->dmadesc_tx || !spihost[host]->dmadesc_rx) goto nomem;
 
         //Tell common code DMA workaround that our DMA channel is idle. If needed, the code will do a DMA reset.

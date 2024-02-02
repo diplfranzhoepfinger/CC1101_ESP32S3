@@ -11,12 +11,15 @@
 
 
 #include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_log.h"
 
 #include "driver/gpio.h"
@@ -95,13 +98,13 @@ static void CC_RX_task(void* arg)
 						float tmp;
 						memcpy(&tmp, Rx_fifo+7, sizeof(float));
 
-						ESP_LOGI(rxtag, "[%u/%u] Rx_Time: %u ms  TX_Timecode: %d ms Temperature: %3.1f  RSSI: %d  LQI: %d  CRC: %s",
+						ESP_LOGI(rxtag, "[%" PRIu32 "/%" PRIu32 "] Rx_Time: %" PRIu32 " ms  TX_Timecode: %" PRIu32 " ms Temperature: %3.1f  RSSI: %" PRIi8 "  LQI: %" PRIu8 "  CRC: %s",
 								nrx_ok, n_rx, time_stamp, rf_timecode, tmp, last_rssi_dbm, last_lqi, ((last_crc) ? "OK" : "BAD"));
 
 					}
 					else {
 						nrx_err++;
-						ESP_LOGE(rxtag, "[%u/%u] Error %d", nrx_ok, n_rx, res);
+						ESP_LOGE(rxtag, "[%" PRIu32 "/%" PRIu32 "] Error %d", nrx_ok, n_rx, res);
 					}
 					ESP_LOGW(rxtag, "^^^^^^^^^^^^^^^^^^^^^^^^^^^RX^^^^^^^^^^^^^^^^^^^^^^^^^^^");
 
@@ -134,7 +137,7 @@ static void CC_TX_task(void* arg)
 
 	while (1) {
 		if (clock() < next_tx_time) {
-			vTaskDelay(100 / portTICK_RATE_MS);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
 			continue;
 		}
 
@@ -167,11 +170,11 @@ static void CC_TX_task(void* arg)
 		time_stamp = clock()-time_stamp;
 		if (res) {
 			n_tx_ok++;
-			ESP_LOGI(txtag, "[%u/%u] OK; Tx_Time: %u ms [RSSI: %d  LQI: %d  CRC: %s]", n_tx_ok, n_tx, time_stamp, last_rssi_dbm, last_lqi, ((last_crc) ? "OK" : "BAD"));
+			ESP_LOGI(txtag, "[%" PRIu32 "/%" PRIu32 "] OK; Tx_Time: %" PRIu32 " ms [RSSI: %" PRIi8 "  LQI: %" PRIu8 "  CRC: %s]", n_tx_ok, n_tx, time_stamp, last_rssi_dbm, last_lqi, ((last_crc) ? "OK" : "BAD"));
 		}
 		else {
 			n_tx_err++;
-			ESP_LOGE(txtag, "[%u/%u] Error", n_tx_err, n_tx);
+			ESP_LOGE(txtag, "[%" PRIu32 "/%" PRIu32 "] Error", n_tx_err, n_tx);
 		}
 		ESP_LOGW(txtag, "^^^^^^^^^^^^^^^^^^^^^^^^^^^TX^^^^^^^^^^^^^^^^^^^^^^^^^^^");
 
@@ -192,7 +195,7 @@ void app_main()
 	//create a queue to handle GDO2 event from isr
     gdo2_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
-	vTaskDelay(3000 / portTICK_RATE_MS);
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
 
 	uint8_t res = cc_setup(&My_addr, 0);
 	if (res > 0) {
@@ -211,7 +214,7 @@ void app_main()
 
         // === Start tasks ===
 		xTaskCreatePinnedToCore(CC_RX_task, "CC_RX_task", 3*1024, NULL, 9, NULL, 1);
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		xTaskCreatePinnedToCore(CC_TX_task, "CC_TX_task", 3*1024, NULL, 8, NULL, 1);
 	}
 	else {
@@ -220,6 +223,6 @@ void app_main()
 
 	while(1)
 	{
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }

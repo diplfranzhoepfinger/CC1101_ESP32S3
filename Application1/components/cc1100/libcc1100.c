@@ -9,9 +9,11 @@
  */
 
 
+#include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <string.h>
 #include "esp_log.h"
 #include "esp_err.h"
 #include "nvs_flash.h"
@@ -368,11 +370,11 @@ unsigned long IRAM_ATTR micros()
     portENTER_CRITICAL_ISR(&microsMux);
     __asm__ __volatile__ ( "rsr     %0, ccount" : "=a" (ccount) );
     if(ccount < lccount){
-        overflow += UINT32_MAX / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ;
+        overflow += UINT32_MAX / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
     }
     lccount = ccount;
     portEXIT_CRITICAL_ISR(&microsMux);
-    return overflow + (ccount / CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ);
+    return overflow + (ccount / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
 }
 
 //-------------------------------------------
@@ -504,7 +506,7 @@ static uint8_t spi_begin(void)
     if (ret) return ret;
 
     if (debug_level > 0) {
-    	ESP_LOGI(tag, "SPI: speed=%u  native pins: %s", spi_lobo_get_speed(cc_spi), spi_lobo_uses_native_pins(cc_spi) ? "true" : "false");
+    	ESP_LOGI(tag, "SPI: speed=%" PRIu32 "  native pins: %s", spi_lobo_get_speed(cc_spi), spi_lobo_uses_native_pins(cc_spi) ? "true" : "false");
     }
     return ret;
 }
@@ -683,10 +685,10 @@ static uint8_t cc_begin(uint8_t addr, uint8_t cc1100_freq, uint8_t cc1100_mode, 
 {
     // Configure ADC on GDO0 (if used)
     if ((GDO0 >= 32) && (GDO0 <= 39)) {
-		adc1_config_width(ADC_WIDTH_12Bit);
+		adc1_config_width(ADC_WIDTH_BIT_12);
 	    if (GDO0 > 35) adc_channel = GDO0-36;
 	    else adc_channel = GDO0-28;
-	    adc1_config_channel_atten(adc_channel, ADC_ATTEN_0db);
+	    adc1_config_channel_atten(adc_channel, ADC_ATTEN_DB_0);
 	    if (debug_level > 0){
 	    	ESP_LOGI(tag, "ADC channel: %d [GPIO: %d]", adc_channel, GDO0);
 	    }
@@ -1395,7 +1397,7 @@ void set_freq(uint32_t freq)
     uint8_t freq0 = reg_freq & 0xFF;         // low byte
 
     if (debug_level > 0) {
-    	ESP_LOGW(tag, "FREQUENCY SET to %u [%02x %02x %02x]", freq, freq2, freq1, freq0);
+    	ESP_LOGW(tag, "FREQUENCY SET to %" PRIu32 " [%02x %02x %02x]", freq, freq2, freq1, freq0);
     }
 
     sidle();
@@ -1547,7 +1549,7 @@ float get_temp(uint16_t wait)
     delay(50);						// wait a bit
 
     for (uint8_t i=0;i<num_samples;i++) { // sample analog temperature value
-    	adc_result += adc1_get_voltage(adc_channel);
+    	adc_result += adc1_get_raw(adc_channel);
     	delay(1);
     }
     adc_result = adc_result / num_samples;
@@ -1561,7 +1563,7 @@ float get_temp(uint16_t wait)
 
     uint16_t n = 0;
 	while (n < wait) {
-		vTaskDelay(1000 / portTICK_RATE_MS);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		n++;
 	}
     spi_write_register(PTEST,0x7F);	//write 0x7F back to PTest (app. note)
