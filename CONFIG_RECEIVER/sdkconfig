@@ -470,8 +470,8 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # Application Configuration
 #
-CONFIG_SENDER=y
-# CONFIG_RECEIVER is not set
+# CONFIG_SENDER is not set
+CONFIG_RECEIVER=y
 # end of Application Configuration
 
 #
